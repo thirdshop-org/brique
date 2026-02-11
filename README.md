@@ -67,12 +67,57 @@ go build -o brique ./cmd/brique-cli
 
 ### CLI
 
-```bash
-# Lister les items dans l'inventaire
-./brique item list
+**Gestion des Items:**
 
+```bash
 # Ajouter un item (mode interactif)
 ./brique item add
+
+# Lister tous les items
+./brique item list
+
+# Voir les détails d'un item
+./brique item get <id>
+
+# Modifier un item
+./brique item update <id>
+
+# Supprimer un item
+./brique item delete <id>
+
+# Rechercher des items
+./brique item search <query>
+```
+
+**Gestion des Assets (fichiers):**
+
+```bash
+# Ajouter un fichier à un item
+./brique asset add <item-id> <file> --type manual --name "User Manual"
+
+# Types supportés: manual, service_manual, exploded_view, stl, firmware, driver, schematic, other
+
+# Lister les assets d'un item
+./brique asset list <item-id>
+
+# Supprimer un asset
+./brique asset delete <asset-id>
+```
+
+**Exemple complet:**
+
+```bash
+# 1. Créer un item
+./brique item add
+# → Suivre les prompts interactifs
+
+# 2. Ajouter des fichiers
+./brique asset add 1 ~/Downloads/manual.pdf -t manual
+./brique asset add 1 ~/Downloads/service.pdf -t service_manual
+
+# 3. Voir le résultat
+./brique item get 1
+# → Affiche la santé documentaire: 🟢 Secured
 ```
 
 ### Stockage des données
@@ -94,13 +139,22 @@ Structure :
 
 Le premier module implémenté est le "Sac à Dos", qui permet de :
 
-### Fonctionnalités actuelles
+### Fonctionnalités actuelles (CLI complète)
 
-- ✅ Créer un item dans l'inventaire
-- ✅ Lister tous les items
-- ✅ Rechercher des items
-- ✅ Ajouter des assets (fichiers) à un item
-- ✅ Calculer la "santé documentaire" d'un item
+**Items:**
+- ✅ CRUD complet (Create, Read, Update, Delete)
+- ✅ Recherche par nom, marque ou catégorie
+- ✅ Vue détaillée avec santé documentaire
+
+**Assets:**
+- ✅ Ajout de fichiers avec type et nom personnalisé
+- ✅ Listing détaillé avec tailles et hash
+- ✅ Suppression sécurisée (DB + fichier physique)
+
+**Santé documentaire:**
+- ✅ 🟢 Secured : manuel + manuel de service présents
+- ✅ 🟡 Partial : quelques fichiers présents
+- ✅ 🔴 Incomplete : aucun fichier
 
 ### Champs d'un Item
 
@@ -154,12 +208,28 @@ SELECT * FROM table WHERE id = ?;
 ```
 3. Régénérer le code : `sqlc generate`
 
+## Progression
+
+- ✅ **Étape 1** : Infrastructure + Module "Sac à Dos" (backend)
+- ✅ **Étape 2** : CLI complète avec toutes les commandes
+- 🚧 **Étape 3** : Interface graphique (Wails + Svelte)
+- ⏳ **Étape 4** : Fonctionnalités avancées (QR codes, export/import)
+- ⏳ **Étape 5** : Mode "Gossip Grids" (synchronisation P2P)
+
 ## Prochaines étapes
 
-- [ ] Interface graphique (Wails + Svelte)
-- [ ] Mode "Gossip Grids" (synchronisation P2P)
+**Étape 3 : Interface Graphique**
+- [ ] Initialiser le projet Wails
+- [ ] Frontend Svelte avec Shadcn
+- [ ] Écrans : Dashboard, détails, formulaires
+- [ ] Drag & drop pour les assets
+- [ ] Pattern "Safe Fetch" (tuple return)
+
+**Fonctionnalités avancées:**
 - [ ] Génération d'étiquettes QR Code
-- [ ] Import/Export de données
+- [ ] Import/Export de données (JSON, CSV)
+- [ ] Backup automatique
+- [ ] Statistiques et rapports
 - [ ] Mode headless pour Raspberry Pi
 
 ## License

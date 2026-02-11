@@ -138,31 +138,90 @@ go test ./core/services/... -v
 # ✅ 6 tests, tous passent
 ```
 
-## 🚧 Prochaines étapes
+## ✅ Étape 2 : Commandes CLI complètes - COMPLÉTÉ
 
-### Étape 2 : Commandes CLI supplémentaires
+Date : 11 février 2026
 
-- [ ] `brique item get <id>` : afficher un item détaillé
-- [ ] `brique item update <id>` : modifier un item
-- [ ] `brique item delete <id>` : supprimer un item
-- [ ] `brique item search <query>` : rechercher des items
-- [ ] `brique asset add <item-id> <file>` : ajouter un asset
-- [ ] `brique asset list <item-id>` : lister les assets d'un item
-- [ ] `brique asset delete <id>` : supprimer un asset
+### Commandes implémentées
 
-### Étape 3 : Interface graphique (Wails)
+**Gestion des Items:**
+- ✅ `brique item add` : ajouter un item (mode interactif amélioré)
+- ✅ `brique item list` : lister tous les items
+- ✅ `brique item get <id>` : afficher un item détaillé avec santé documentaire
+- ✅ `brique item update <id>` : modifier un item (mode interactif)
+- ✅ `brique item delete <id>` : supprimer un item (avec confirmation)
+- ✅ `brique item search <query>` : rechercher des items
 
-- [ ] Initialiser le projet Wails
-- [ ] Créer le frontend Svelte
-- [ ] Intégrer Shadcn-svelte
-- [ ] Wrapper "Safe Fetch" (pattern tuple return)
+**Gestion des Assets:**
+- ✅ `brique asset add <item-id> <file>` : ajouter un asset avec flags --type et --name
+- ✅ `brique asset list <item-id>` : lister les assets d'un item avec détails
+- ✅ `brique asset delete <id>` : supprimer un asset (avec confirmation)
+
+### Fonctionnalités ajoutées
+
+- ✅ Mode interactif avec `bufio.Reader` (support des espaces)
+- ✅ Confirmations pour les opérations destructives
+- ✅ Formatage des tailles de fichiers (B, KB, MB, GB)
+- ✅ Emojis de santé documentaire (🟢 🟡 🔴)
+- ✅ Validation des entrées (IDs, types d'assets, chemins)
+- ✅ Messages d'erreur contextuels
+- ✅ Script de test complet `test_complete.sh`
+
+### Tests
+
+Tous les tests passent avec succès :
+- ✅ 10 scénarios testés dans `test_complete.sh`
+- ✅ Création, lecture, mise à jour, recherche
+- ✅ Ajout et listing d'assets
+- ✅ Calcul correct de la santé documentaire
+- ✅ Copie sécurisée des fichiers
+- ✅ Hash SHA256 calculés
+
+Voir `STEP2_COMPLETE.md` pour les détails complets.
+
+## 🚧 Étape 3 : Interface Graphique (Wails + Svelte) - EN COURS
+
+Date : 11 février 2026
+
+### Infrastructure complétée
+
+**Wails:**
+- ✅ Configuration wails.json
+- ✅ Point d'entrée main.go avec hooks (startup, shutdown, domReady, beforeClose)
+- ✅ Handlers Go (10 méthodes exposées : GetAllItems, GetItem, CreateItem, etc.)
+- ✅ DTOs pour communication Go ↔ TypeScript
+
+**Frontend Svelte + TypeScript:**
+- ✅ Initialiser le projet Svelte avec Vite
+- ✅ Configuration TypeScript
+- ✅ Intégrer Tailwind CSS avec thème Shadcn (palette Slate, radius 0.25rem)
+- ✅ Wrapper "Safe Fetch" (pattern tuple return comme dans REQUIRED.md)
+- ✅ Lucide-svelte pour les icons
+- ✅ Support dark mode
+
+**Composants implémentés:**
+- ✅ App.svelte : liste + recherche en temps réel + header
+- ✅ ItemCard.svelte : carte avec santé documentaire (🟢🟡🔴)
+
+**Fonctionnalités UI:**
+- ✅ Liste des items en grille responsive (1/2/3 colonnes)
+- ✅ Recherche instantanée (nom, marque, catégorie)
+- ✅ Affichage santé documentaire avec emojis
+- ✅ États de chargement, erreur et empty
+- ✅ Build frontend réussi (48KB JS, 11KB CSS)
+
+Voir `STEP3_IN_PROGRESS.md` pour les détails complets.
+
+### À implémenter
+
 - [ ] Bus d'événements pour la progression
-- [ ] Écrans :
-  - [ ] Liste des items (grille/liste)
-  - [ ] Détail d'un item
+- [ ] Écrans supplémentaires :
+  - [ ] Détail d'un item (modal)
   - [ ] Formulaire ajout/édition
-  - [ ] Gestion des assets
-  - [ ] Recherche
+  - [ ] Gestion des assets (drag & drop)
+  - [ ] Dashboard avec statistiques
+
+## 🚧 Prochaines étapes
 
 ### Étape 4 : Fonctionnalités avancées
 

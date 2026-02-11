@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./brique asset:*)",
+      "Bash(chmod:*)",
+      "Bash(./test_complete.sh:*)",
+      "Bash(go get:*)",
+      "Bash(wails generate:*)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}
