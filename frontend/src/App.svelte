@@ -1,14 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { safeCall } from './lib/utils/safe';
-  import { GetAllItems, GetItemWithAssets } from './lib/wails/wailsjs/go/main/App';
+  import { GetAllItems } from './lib/wails/wailsjs/go/main/App';
+  import { main } from './lib/wails/wailsjs/go/models';
   import ItemCard from './lib/components/ItemCard.svelte';
   import NotificationToast from './lib/components/NotificationToast.svelte';
   import ProgressBar from './lib/components/ProgressBar.svelte';
   import { eventBus } from './lib/stores/events.svelte';
   import { Package, Plus, Search } from 'lucide-svelte';
 
-  let items = $state<any[]>([]);
+  let items = $state<main.ItemDTO[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
   let searchQuery = $state('');

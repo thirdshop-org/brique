@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Package, FileText } from 'lucide-svelte';
+  import { Package } from 'lucide-svelte';
 
   interface Props {
     item: any;
