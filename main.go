@@ -24,12 +24,14 @@ var assets embed.FS
 
 // App struct
 type App struct {
-	ctx             context.Context
-	cfg             *config.Config
-	database        *db.Database
-	backpackService *services.BackpackService
-	logger          *slog.Logger
-	events          *EventEmitter
+	ctx              context.Context
+	cfg              *config.Config
+	database         *db.Database
+	backpackService  *services.BackpackService
+	gossipService    *services.GossipService
+	discoveryService *services.DiscoveryService
+	logger           *slog.Logger
+	events           *EventEmitter
 }
 
 // NewApp creates a new App application struct
@@ -74,15 +76,50 @@ func (a *App) startup(ctx context.Context) {
 	// Create backpack service
 	a.backpackService = services.NewBackpackService(queries, a.cfg.AssetsDir)
 
+	// Create gossip service
+	instanceName := fmt.Sprintf("Brique-%s", os.Getenv("USER"))
+	a.gossipService = services.NewGossipService(queries, instanceName, "localhost:9090")
+
+	// Get instance info
+	instanceInfo, err := a.gossipService.GetInstanceInfo(ctx)
+	if err != nil {
+		a.logger.Error("Failed to get instance info", "error", err)
+		os.Exit(1)
+	}
+
+	// Create discovery service
+	a.discoveryService = services.NewDiscoveryService(
+		instanceInfo.InstanceID,
+		instanceName,
+		9090, // Port for gossip API
+		a.logger,
+		a.gossipService,
+	)
+
+	// Start discovery (announce and browse)
+	if err := a.discoveryService.Start(ctx); err != nil {
+		a.logger.Warn("Failed to start discovery service", "error", err)
+		// Not a fatal error, continue without discovery
+	}
+
 	a.logger.Info("Application initialized successfully")
 	a.events.Success("Brique démarré", "L'application est prête")
 }
 
 // shutdown is called at application termination
 func (a *App) shutdown(ctx context.Context) {
+	// Stop discovery service
+	if a.discoveryService != nil {
+		if err := a.discoveryService.Stop(); err != nil {
+			a.logger.Error("Failed to stop discovery service", "error", err)
+		}
+	}
+
+	// Close database
 	if a.database != nil {
 		a.database.Close()
 	}
+
 	a.logger.Info("Application shutdown")
 }
 

@@ -8,11 +8,12 @@
   import ItemForm from './lib/components/ItemForm.svelte';
   import AssetManager from './lib/components/AssetManager.svelte';
   import Dashboard from './lib/components/Dashboard.svelte';
+  import SyncView from './lib/components/SyncView.svelte';
   import QRCodeModal from './lib/components/QRCodeModal.svelte';
   import NotificationToast from './lib/components/NotificationToast.svelte';
   import ProgressBar from './lib/components/ProgressBar.svelte';
   import { eventBus } from './lib/stores/events.svelte';
-  import { Package, Plus, Search, BarChart3, List } from 'lucide-svelte';
+  import { Package, Plus, Search, BarChart3, List, Network } from 'lucide-svelte';
 
   let items = $state<main.ItemDTO[]>([]);
   let loading = $state(true);
@@ -20,7 +21,7 @@
   let searchQuery = $state('');
 
   // Navigation
-  let currentView = $state<'inventory' | 'dashboard'>('inventory');
+  let currentView = $state<'inventory' | 'dashboard' | 'sync'>('inventory');
 
   // Modal states
   let detailModalItemId = $state<number | null>(null);
@@ -145,6 +146,13 @@
             <BarChart3 class="w-4 h-4" />
             Tableau de bord
           </button>
+          <button
+            class="flex items-center gap-2 px-4 py-2 rounded-lg transition {currentView === 'sync' ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'}"
+            onclick={() => currentView = 'sync'}
+          >
+            <Network class="w-4 h-4" />
+            Synchronisation
+          </button>
         </div>
       </div>
     </div>
@@ -206,6 +214,8 @@
       {/if}
     {:else if currentView === 'dashboard'}
       <Dashboard />
+    {:else if currentView === 'sync'}
+      <SyncView />
     {/if}
   </main>
 </div>

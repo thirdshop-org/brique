@@ -21,15 +21,38 @@ type Asset struct {
 }
 
 type Item struct {
-	ID           int64        `json:"id"`
-	Name         string       `json:"name"`
-	Category     string       `json:"category"`
-	Brand        string       `json:"brand"`
-	Model        string       `json:"model"`
-	SerialNumber string       `json:"serial_number"`
-	PurchaseDate sql.NullTime `json:"purchase_date"`
-	PhotoPath    string       `json:"photo_path"`
-	Notes        string       `json:"notes"`
-	CreatedAt    time.Time    `json:"created_at"`
-	UpdatedAt    time.Time    `json:"updated_at"`
+	ID           int64          `json:"id"`
+	Name         string         `json:"name"`
+	Category     string         `json:"category"`
+	Brand        string         `json:"brand"`
+	Model        string         `json:"model"`
+	SerialNumber string         `json:"serial_number"`
+	PurchaseDate sql.NullTime   `json:"purchase_date"`
+	PhotoPath    string         `json:"photo_path"`
+	Notes        string         `json:"notes"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	OriginPeerID sql.NullString `json:"origin_peer_id"`
+	SyncVersion  sql.NullInt64  `json:"sync_version"`
+}
+
+type Peer struct {
+	ID        string       `json:"id"`
+	Name      string       `json:"name"`
+	Address   string       `json:"address"`
+	LastSeen  sql.NullTime `json:"last_seen"`
+	LastSync  sql.NullTime `json:"last_sync"`
+	IsTrusted sql.NullBool `json:"is_trusted"`
+	CreatedAt sql.NullTime `json:"created_at"`
+}
+
+type SyncLog struct {
+	ID            int64          `json:"id"`
+	PeerID        string         `json:"peer_id"`
+	Timestamp     sql.NullTime   `json:"timestamp"`
+	ItemsReceived sql.NullInt64  `json:"items_received"`
+	ItemsSent     sql.NullInt64  `json:"items_sent"`
+	Conflicts     sql.NullInt64  `json:"conflicts"`
+	DurationMs    sql.NullInt64  `json:"duration_ms"`
+	Error         sql.NullString `json:"error"`
 }

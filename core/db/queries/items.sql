@@ -37,3 +37,11 @@ WHERE id = ?;
 SELECT * FROM items
 WHERE name LIKE ? OR brand LIKE ? OR category LIKE ?
 ORDER BY updated_at DESC;
+
+-- name: GetItemsModifiedSince :many
+SELECT * FROM items
+WHERE updated_at > ?
+ORDER BY updated_at DESC;
+
+-- name: CountItems :one
+SELECT COUNT(*) FROM items;

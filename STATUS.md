@@ -265,21 +265,32 @@ Date : 13 février 2026
 
 Voir `STEP4_COMPLETE.md` pour les détails complets.
 
-## 🚧 Prochaines étapes
+## 🚧 Étape 5 : Module "Gossip Grids" - EN COURS
 
-### Étape 5 : Module "Gossip Grids"
+Date de début : 13 février 2026
 
-- [ ] Synchronisation P2P locale (LAN)
-- [ ] Mode Sneakernet (USB)
-- [ ] Synchronisation Internet entre instances
-- [ ] Protocole de gossip
+### Implémenté
 
-### Étape 5 : Module "Gossip Grids"
+- [✅] Document de conception (GOSSIP_GRIDS_DESIGN.md)
+- [✅] Migrations de base de données (peers, sync_logs)
+- [✅] Modèles de données (Peer, SyncResult, SyncLog)
+- [✅] Requêtes SQL avec sqlc (18 requêtes)
+- [✅] Service GossipService (~260 lignes)
+  - ✅ Gestion CRUD des pairs
+  - ✅ Tracking des synchronisations
+  - ✅ Récupération des changements
+  - ✅ Logging des événements
 
-- [ ] Synchronisation P2P locale (LAN)
-- [ ] Mode Sneakernet (USB)
-- [ ] Synchronisation Internet entre instances
-- [ ] Protocole de gossip
+### À implémenter
+
+- [ ] Découverte de pairs (mDNS)
+- [ ] Protocole de synchronisation HTTP
+- [ ] API REST pour la synchronisation
+- [ ] Résolution de conflits (Last-Write-Wins)
+- [ ] Interface utilisateur (SyncView)
+- [ ] Tests d'intégration (2+ instances)
+
+Voir `STEP5_IN_PROGRESS.md` pour les détails complets.
 
 ## Notes techniques
 

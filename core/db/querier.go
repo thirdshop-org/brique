@@ -6,21 +6,39 @@ package db
 
 import (
 	"context"
+	"database/sql"
+	"time"
 )
 
 type Querier interface {
 	CountAssetsByItemID(ctx context.Context, itemID int64) (int64, error)
 	CountAssetsByItemIDAndType(ctx context.Context, arg CountAssetsByItemIDAndTypeParams) (int64, error)
+	CountItems(ctx context.Context) (int64, error)
 	CreateAsset(ctx context.Context, arg CreateAssetParams) (Asset, error)
 	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
+	CreatePeer(ctx context.Context, arg CreatePeerParams) (Peer, error)
+	CreateSyncLog(ctx context.Context, arg CreateSyncLogParams) (SyncLog, error)
 	DeleteAsset(ctx context.Context, id int64) error
 	DeleteItem(ctx context.Context, id int64) error
+	DeleteOldSyncLogs(ctx context.Context, timestamp sql.NullTime) error
+	DeletePeer(ctx context.Context, id string) error
 	GetAllItems(ctx context.Context) ([]Item, error)
+	GetAllPeers(ctx context.Context) ([]Peer, error)
 	GetAssetByID(ctx context.Context, id int64) (Asset, error)
 	GetAssetsByItemID(ctx context.Context, itemID int64) ([]Asset, error)
 	GetItemByID(ctx context.Context, id int64) (Item, error)
+	GetItemsModifiedSince(ctx context.Context, updatedAt time.Time) ([]Item, error)
+	GetPeer(ctx context.Context, id string) (Peer, error)
+	GetPeerByAddress(ctx context.Context, address string) (Peer, error)
+	GetRecentSyncLogs(ctx context.Context, limit int64) ([]SyncLog, error)
+	GetSyncLog(ctx context.Context, id int64) (SyncLog, error)
+	GetSyncLogsByPeer(ctx context.Context, arg GetSyncLogsByPeerParams) ([]SyncLog, error)
+	GetTrustedPeers(ctx context.Context) ([]Peer, error)
 	SearchItems(ctx context.Context, arg SearchItemsParams) ([]Item, error)
 	UpdateItem(ctx context.Context, arg UpdateItemParams) error
+	UpdatePeerLastSeen(ctx context.Context, arg UpdatePeerLastSeenParams) error
+	UpdatePeerLastSync(ctx context.Context, arg UpdatePeerLastSyncParams) error
+	UpdatePeerTrust(ctx context.Context, arg UpdatePeerTrustParams) error
 }
 
 var _ Querier = (*Queries)(nil)

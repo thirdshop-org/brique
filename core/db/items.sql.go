@@ -11,6 +11,17 @@ import (
 	"time"
 )
 
+const countItems = `-- name: CountItems :one
+SELECT COUNT(*) FROM items
+`
+
+func (q *Queries) CountItems(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countItems)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createItem = `-- name: CreateItem :one
 INSERT INTO items (
     name, category, brand, model, serial_number,
@@ -18,7 +29,7 @@ INSERT INTO items (
 ) VALUES (
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
-RETURNING id, name, category, brand, model, serial_number, purchase_date, photo_path, notes, created_at, updated_at
+RETURNING id, name, category, brand, model, serial_number, purchase_date, photo_path, notes, created_at, updated_at, origin_peer_id, sync_version
 `
 
 type CreateItemParams struct {
@@ -60,6 +71,8 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OriginPeerID,
+		&i.SyncVersion,
 	)
 	return i, err
 }
@@ -75,7 +88,7 @@ func (q *Queries) DeleteItem(ctx context.Context, id int64) error {
 }
 
 const getAllItems = `-- name: GetAllItems :many
-SELECT id, name, category, brand, model, serial_number, purchase_date, photo_path, notes, created_at, updated_at FROM items
+SELECT id, name, category, brand, model, serial_number, purchase_date, photo_path, notes, created_at, updated_at, origin_peer_id, sync_version FROM items
 ORDER BY updated_at DESC
 `
 
@@ -100,6 +113,8 @@ func (q *Queries) GetAllItems(ctx context.Context) ([]Item, error) {
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OriginPeerID,
+			&i.SyncVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -115,7 +130,7 @@ func (q *Queries) GetAllItems(ctx context.Context) ([]Item, error) {
 }
 
 const getItemByID = `-- name: GetItemByID :one
-SELECT id, name, category, brand, model, serial_number, purchase_date, photo_path, notes, created_at, updated_at FROM items
+SELECT id, name, category, brand, model, serial_number, purchase_date, photo_path, notes, created_at, updated_at, origin_peer_id, sync_version FROM items
 WHERE id = ?
 `
 
@@ -134,12 +149,57 @@ func (q *Queries) GetItemByID(ctx context.Context, id int64) (Item, error) {
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OriginPeerID,
+		&i.SyncVersion,
 	)
 	return i, err
 }
 
+const getItemsModifiedSince = `-- name: GetItemsModifiedSince :many
+SELECT id, name, category, brand, model, serial_number, purchase_date, photo_path, notes, created_at, updated_at, origin_peer_id, sync_version FROM items
+WHERE updated_at > ?
+ORDER BY updated_at DESC
+`
+
+func (q *Queries) GetItemsModifiedSince(ctx context.Context, updatedAt time.Time) ([]Item, error) {
+	rows, err := q.db.QueryContext(ctx, getItemsModifiedSince, updatedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Item{}
+	for rows.Next() {
+		var i Item
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Category,
+			&i.Brand,
+			&i.Model,
+			&i.SerialNumber,
+			&i.PurchaseDate,
+			&i.PhotoPath,
+			&i.Notes,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OriginPeerID,
+			&i.SyncVersion,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const searchItems = `-- name: SearchItems :many
-SELECT id, name, category, brand, model, serial_number, purchase_date, photo_path, notes, created_at, updated_at FROM items
+SELECT id, name, category, brand, model, serial_number, purchase_date, photo_path, notes, created_at, updated_at, origin_peer_id, sync_version FROM items
 WHERE name LIKE ? OR brand LIKE ? OR category LIKE ?
 ORDER BY updated_at DESC
 `
@@ -171,6 +231,8 @@ func (q *Queries) SearchItems(ctx context.Context, arg SearchItemsParams) ([]Ite
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OriginPeerID,
+			&i.SyncVersion,
 		); err != nil {
 			return nil, err
 		}

@@ -42,6 +42,14 @@ export function GetAssets(arg1) {
   return window['go']['main']['App']['GetAssets'](arg1);
 }
 
+export function GetGossipChanges(arg1) {
+  return window['go']['main']['App']['GetGossipChanges'](arg1);
+}
+
+export function GetGossipInfo() {
+  return window['go']['main']['App']['GetGossipInfo']();
+}
+
 export function GetItem(arg1) {
   return window['go']['main']['App']['GetItem'](arg1);
 }
@@ -50,12 +58,36 @@ export function GetItemWithAssets(arg1) {
   return window['go']['main']['App']['GetItemWithAssets'](arg1);
 }
 
+export function GetPeers() {
+  return window['go']['main']['App']['GetPeers']();
+}
+
+export function GetSyncHistory(arg1) {
+  return window['go']['main']['App']['GetSyncHistory'](arg1);
+}
+
 export function ImportFromJSON() {
   return window['go']['main']['App']['ImportFromJSON']();
 }
 
+export function RemovePeer(arg1) {
+  return window['go']['main']['App']['RemovePeer'](arg1);
+}
+
 export function SearchItems(arg1) {
   return window['go']['main']['App']['SearchItems'](arg1);
+}
+
+export function SetPeerTrusted(arg1, arg2) {
+  return window['go']['main']['App']['SetPeerTrusted'](arg1, arg2);
+}
+
+export function SyncWithPeer(arg1) {
+  return window['go']['main']['App']['SyncWithPeer'](arg1);
+}
+
+export function SyncWithPeerHTTP(arg1) {
+  return window['go']['main']['App']['SyncWithPeerHTTP'](arg1);
 }
 
 export function UpdateItem(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {

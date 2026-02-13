@@ -496,6 +496,148 @@ func (a *App) ExportToCSV() error {
 	return nil
 }
 
+// PeerDTO is the Data Transfer Object for peers
+type PeerDTO struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Address   string `json:"address"`
+	LastSeen  string `json:"lastSeen"`
+	LastSync  string `json:"lastSync"`
+	IsTrusted bool   `json:"isTrusted"`
+	Status    string `json:"status"`
+}
+
+// SyncResultDTO is the Data Transfer Object for sync results
+type SyncResultDTO struct {
+	ItemsReceived int   `json:"itemsReceived"`
+	ItemsSent     int   `json:"itemsSent"`
+	Conflicts     int   `json:"conflicts"`
+	DurationMs    int64 `json:"durationMs"`
+}
+
+// SyncLogDTO is the Data Transfer Object for sync logs
+type SyncLogDTO struct {
+	ID            int64  `json:"id"`
+	PeerName      string `json:"peerName"`
+	Timestamp     string `json:"timestamp"`
+	ItemsReceived int    `json:"itemsReceived"`
+	ItemsSent     int    `json:"itemsSent"`
+	Conflicts     int    `json:"conflicts"`
+	DurationMs    int64  `json:"durationMs"`
+	Error         string `json:"error"`
+}
+
+// GetPeers returns all discovered peers
+func (a *App) GetPeers() ([]PeerDTO, error) {
+	peers, err := a.gossipService.GetPeers(a.ctx)
+	if err != nil {
+		a.events.Error("Erreur", "Impossible de charger les pairs")
+		return nil, err
+	}
+
+	dtos := make([]PeerDTO, len(peers))
+	for i, peer := range peers {
+		dtos[i] = peerToDTO(&peer)
+	}
+
+	return dtos, nil
+}
+
+// SyncWithPeer synchronizes with a specific peer
+func (a *App) SyncWithPeer(peerID string) (*SyncResultDTO, error) {
+	result, err := a.SyncWithPeerHTTP(peerID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SyncResultDTO{
+		ItemsReceived: result.ItemsReceived,
+		ItemsSent:     result.ItemsSent,
+		Conflicts:     result.Conflicts,
+		DurationMs:    result.DurationMs,
+	}, nil
+}
+
+// SetPeerTrusted sets whether a peer is trusted
+func (a *App) SetPeerTrusted(peerID string, trusted bool) error {
+	if err := a.gossipService.SetPeerTrust(a.ctx, peerID, trusted); err != nil {
+		a.events.Error("Erreur", "Impossible de modifier la confiance du pair")
+		return err
+	}
+
+	action := "révoqué"
+	if trusted {
+		action = "approuvé"
+	}
+	a.events.Success("Pair " + action, fmt.Sprintf("Le pair a été %s", action))
+
+	return nil
+}
+
+// RemovePeer removes a peer from the list
+func (a *App) RemovePeer(peerID string) error {
+	if err := a.gossipService.RemovePeer(a.ctx, peerID); err != nil {
+		a.events.Error("Erreur", "Impossible de supprimer le pair")
+		return err
+	}
+
+	a.events.Success("Pair supprimé", "Le pair a été retiré de la liste")
+	return nil
+}
+
+// GetSyncHistory returns recent synchronization history
+func (a *App) GetSyncHistory(limit int) ([]SyncLogDTO, error) {
+	logs, err := a.gossipService.GetRecentSyncHistory(a.ctx, limit)
+	if err != nil {
+		a.events.Error("Erreur", "Impossible de charger l'historique")
+		return nil, err
+	}
+
+	// Get peer names
+	peers, _ := a.gossipService.GetPeers(a.ctx)
+	peerNames := make(map[string]string)
+	for _, peer := range peers {
+		peerNames[peer.ID] = peer.Name
+	}
+
+	dtos := make([]SyncLogDTO, len(logs))
+	for i, log := range logs {
+		dtos[i] = SyncLogDTO{
+			ID:            log.ID,
+			PeerName:      peerNames[log.PeerID],
+			Timestamp:     log.Timestamp.Format("2006-01-02 15:04:05"),
+			ItemsReceived: log.ItemsReceived,
+			ItemsSent:     log.ItemsSent,
+			Conflicts:     log.Conflicts,
+			DurationMs:    log.DurationMs,
+			Error:         log.Error,
+		}
+	}
+
+	return dtos, nil
+}
+
+// Helper function to convert peer to DTO
+func peerToDTO(peer *models.Peer) PeerDTO {
+	dto := PeerDTO{
+		ID:        peer.ID,
+		Name:      peer.Name,
+		Address:   peer.Address,
+		IsTrusted: peer.IsTrusted,
+		Status:    string(peer.Status),
+	}
+
+	if !peer.LastSeen.IsZero() {
+		dto.LastSeen = peer.LastSeen.Format("2006-01-02 15:04:05")
+	}
+
+	if peer.LastSync != nil {
+		dto.LastSync = peer.LastSync.Format("2006-01-02 15:04:05")
+	}
+
+	return dto
+}
+
 // CreateBackup creates a backup of the database and assets directory
 func (a *App) CreateBackup() error {
 	a.events.EmitProgress(ProgressData{
