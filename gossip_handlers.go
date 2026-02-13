@@ -19,15 +19,15 @@ type GossipInfoResponse struct {
 
 // SyncRequest represents a sync request
 type SyncRequest struct {
-	PeerID  string         `json:"peer_id"`
-	Changes []models.Item  `json:"changes"`
-	Since   time.Time      `json:"since"`
+	PeerID  string        `json:"peer_id"`
+	Changes []models.Item `json:"changes"`
+	Since   time.Time     `json:"since"`
 }
 
 // SyncResponse represents a sync response
 type SyncResponse struct {
-	Changes []models.Item       `json:"changes"`
-	Result  *models.SyncResult  `json:"result"`
+	Changes []models.Item      `json:"changes"`
+	Result  *models.SyncResult `json:"result"`
 }
 
 // GetGossipInfo returns information about this instance
