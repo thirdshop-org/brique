@@ -235,14 +235,44 @@ Voir `STEP3_IN_PROGRESS.md` pour les détails complets.
 
 Voir `STEP3_COMPLETE.md` pour les détails complets.
 
+## ✅ Étape 4 : Fonctionnalités avancées - COMPLÉTÉE
+
+Date : 13 février 2026
+
+### Fonctionnalités implémentées
+
+- [✅] Génération d'étiquettes QR Code
+  - ✅ Handler Go avec bibliothèque go-qrcode
+  - ✅ Composant QRCodeModal.svelte
+  - ✅ Téléchargement en PNG
+  - ✅ Intégration dans ItemDetailModal
+- [✅] Export de données
+  - ✅ Export JSON complet avec métadonnées
+  - ✅ Export CSV pour Excel/LibreOffice
+  - ✅ Dialog de sauvegarde natif
+  - ✅ Boutons dans le Dashboard
+- [✅] Import de données
+  - ✅ Import depuis JSON
+  - ✅ Détection de doublons par numéro de série
+  - ✅ Statistiques d'import (importés/ignorés)
+  - ✅ Rechargement automatique après import
+- [✅] Backup manuel
+  - ✅ Copie de la base de données SQLite
+  - ✅ Copie récursive du dossier assets
+  - ✅ Dossiers horodatés avec métadonnées
+  - ✅ Barre de progression en temps réel
+  - ✅ Bouton dans le Dashboard
+
+Voir `STEP4_COMPLETE.md` pour les détails complets.
+
 ## 🚧 Prochaines étapes
 
-### Étape 4 : Fonctionnalités avancées
+### Étape 5 : Module "Gossip Grids"
 
-- [ ] Génération d'étiquettes QR Code
-- [ ] Export/Import de données
-- [ ] Backup automatique
-- [ ] Statistiques et rapports
+- [ ] Synchronisation P2P locale (LAN)
+- [ ] Mode Sneakernet (USB)
+- [ ] Synchronisation Internet entre instances
+- [ ] Protocole de gossip
 
 ### Étape 5 : Module "Gossip Grids"
 

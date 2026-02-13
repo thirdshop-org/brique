@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X, Package, Edit, Trash2, FileText, Calendar, Tag, Hash } from 'lucide-svelte';
+  import { X, Package, Edit, Trash2, FileText, Calendar, Tag, Hash, QrCode } from 'lucide-svelte';
   import { safeCall } from '../utils/safe';
   import { GetItemWithAssets, DeleteItem } from '../wails/wailsjs/go/main/App';
   import { main } from '../wails/wailsjs/go/models';
@@ -10,9 +10,10 @@
     onClose: () => void;
     onEdit?: (itemId: number) => void;
     onDelete?: () => void;
+    onGenerateQR?: (itemId: number, itemName: string) => void;
   }
 
-  let { itemId, onClose, onEdit, onDelete }: Props = $props();
+  let { itemId, onClose, onEdit, onDelete, onGenerateQR }: Props = $props();
 
   let itemWithAssets = $state<main.ItemWithAssetsDTO | null>(null);
   let loading = $state(false);
@@ -289,23 +290,34 @@
 
       <!-- Footer -->
       {#if !loading && itemWithAssets && !showDeleteConfirm}
-        <div class="flex items-center justify-end gap-3 p-6 border-t bg-secondary/30">
-          {#if onEdit}
+        <div class="flex items-center justify-between gap-3 p-6 border-t bg-secondary/30">
+          {#if onGenerateQR}
             <button
-              onclick={() => onEdit?.(itemId!)}
-              class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
+              onclick={() => onGenerateQR?.(itemId!, itemWithAssets!.item.name)}
+              class="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-secondary transition"
             >
-              <Edit class="w-4 h-4" />
-              Modifier
+              <QrCode class="w-4 h-4" />
+              QR Code
             </button>
           {/if}
-          <button
-            onclick={() => showDeleteConfirm = true}
-            class="flex items-center gap-2 px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition"
-          >
-            <Trash2 class="w-4 h-4" />
-            Supprimer
-          </button>
+          <div class="flex items-center gap-3 ml-auto">
+            {#if onEdit}
+              <button
+                onclick={() => onEdit?.(itemId!)}
+                class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
+              >
+                <Edit class="w-4 h-4" />
+                Modifier
+              </button>
+            {/if}
+            <button
+              onclick={() => showDeleteConfirm = true}
+              class="flex items-center gap-2 px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition"
+            >
+              <Trash2 class="w-4 h-4" />
+              Supprimer
+            </button>
+          </div>
         </div>
       {/if}
 

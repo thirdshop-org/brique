@@ -6,6 +6,10 @@ export function AddAsset(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['AddAsset'](arg1, arg2, arg3, arg4);
 }
 
+export function CreateBackup() {
+  return window['go']['main']['App']['CreateBackup']();
+}
+
 export function CreateItem(arg1, arg2, arg3, arg4, arg5, arg6) {
   return window['go']['main']['App']['CreateItem'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
@@ -16,6 +20,18 @@ export function DeleteAsset(arg1) {
 
 export function DeleteItem(arg1) {
   return window['go']['main']['App']['DeleteItem'](arg1);
+}
+
+export function ExportToCSV() {
+  return window['go']['main']['App']['ExportToCSV']();
+}
+
+export function ExportToJSON() {
+  return window['go']['main']['App']['ExportToJSON']();
+}
+
+export function GenerateQRCode(arg1) {
+  return window['go']['main']['App']['GenerateQRCode'](arg1);
 }
 
 export function GetAllItems() {
@@ -32,6 +48,10 @@ export function GetItem(arg1) {
 
 export function GetItemWithAssets(arg1) {
   return window['go']['main']['App']['GetItemWithAssets'](arg1);
+}
+
+export function ImportFromJSON() {
+  return window['go']['main']['App']['ImportFromJSON']();
 }
 
 export function SearchItems(arg1) {

@@ -4,11 +4,19 @@ import {main} from '../models';
 
 export function AddAsset(arg1:number,arg2:string,arg3:string,arg4:string):Promise<main.AssetDTO>;
 
+export function CreateBackup():Promise<void>;
+
 export function CreateItem(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<main.ItemDTO>;
 
 export function DeleteAsset(arg1:number):Promise<void>;
 
 export function DeleteItem(arg1:number):Promise<void>;
+
+export function ExportToCSV():Promise<void>;
+
+export function ExportToJSON():Promise<void>;
+
+export function GenerateQRCode(arg1:number):Promise<string>;
 
 export function GetAllItems():Promise<Array<main.ItemDTO>>;
 
@@ -17,6 +25,8 @@ export function GetAssets(arg1:number):Promise<Array<main.AssetDTO>>;
 export function GetItem(arg1:number):Promise<main.ItemDTO>;
 
 export function GetItemWithAssets(arg1:number):Promise<main.ItemWithAssetsDTO>;
+
+export function ImportFromJSON():Promise<void>;
 
 export function SearchItems(arg1:string):Promise<Array<main.ItemDTO>>;
 

@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Package, TrendingUp, AlertCircle, CheckCircle, AlertTriangle, BarChart3 } from 'lucide-svelte';
+  import { Package, TrendingUp, AlertCircle, CheckCircle, AlertTriangle, BarChart3, Download, FileJson, FileSpreadsheet, Upload, HardDrive } from 'lucide-svelte';
   import { safeCall } from '../utils/safe';
-  import { GetAllItems } from '../wails/wailsjs/go/main/App';
+  import { GetAllItems, ExportToJSON, ExportToCSV, ImportFromJSON, CreateBackup } from '../wails/wailsjs/go/main/App';
   import { main } from '../wails/wailsjs/go/models';
+  import { eventBus } from '../stores/events.svelte';
 
   let items = $state<main.ItemDTO[]>([]);
   let loading = $state(true);
@@ -79,17 +80,111 @@
   function getMaxCount(items: [string, number][]): number {
     return Math.max(...items.map(([, count]) => count), 1);
   }
+
+  let exporting = $state(false);
+  let importing = $state(false);
+  let backing = $state(false);
+
+  async function handleExportJSON() {
+    exporting = true;
+    const [err] = await safeCall(ExportToJSON());
+    exporting = false;
+
+    if (err) {
+      // Error already handled by backend events
+      return;
+    }
+  }
+
+  async function handleExportCSV() {
+    exporting = true;
+    const [err] = await safeCall(ExportToCSV());
+    exporting = false;
+
+    if (err) {
+      // Error already handled by backend events
+      return;
+    }
+  }
+
+  async function handleImportJSON() {
+    importing = true;
+    const [err] = await safeCall(ImportFromJSON());
+    importing = false;
+
+    if (err) {
+      // Error already handled by backend events
+      return;
+    }
+
+    // Reload data after import
+    loadData();
+  }
+
+  async function handleCreateBackup() {
+    backing = true;
+    const [err] = await safeCall(CreateBackup());
+    backing = false;
+
+    if (err) {
+      // Error already handled by backend events
+      return;
+    }
+  }
 </script>
 
 <div class="space-y-6">
   <!-- Header -->
-  <div class="flex items-center gap-3">
-    <div class="p-2 bg-primary/10 rounded-lg">
-      <BarChart3 class="w-6 h-6 text-primary" />
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-primary/10 rounded-lg">
+        <BarChart3 class="w-6 h-6 text-primary" />
+      </div>
+      <div>
+        <h2 class="text-2xl font-bold">Tableau de bord</h2>
+        <p class="text-sm text-muted-foreground">Vue d'ensemble de votre inventaire</p>
+      </div>
     </div>
-    <div>
-      <h2 class="text-2xl font-bold">Tableau de bord</h2>
-      <p class="text-sm text-muted-foreground">Vue d'ensemble de votre inventaire</p>
+
+    <!-- Export/Import/Backup Actions -->
+    <div class="flex gap-2">
+      <button
+        onclick={handleCreateBackup}
+        disabled={backing || importing || exporting || loading}
+        class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Créer un backup"
+      >
+        <HardDrive class="w-4 h-4" />
+        <span class="hidden lg:inline">Backup</span>
+      </button>
+      <div class="w-px bg-border"></div>
+      <button
+        onclick={handleImportJSON}
+        disabled={importing || exporting || loading || backing}
+        class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Importer depuis JSON"
+      >
+        <Upload class="w-4 h-4" />
+        <span class="hidden sm:inline">Importer</span>
+      </button>
+      <button
+        onclick={handleExportJSON}
+        disabled={exporting || loading || importing || backing}
+        class="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-secondary transition disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Exporter en JSON"
+      >
+        <FileJson class="w-4 h-4" />
+        <span class="hidden sm:inline">JSON</span>
+      </button>
+      <button
+        onclick={handleExportCSV}
+        disabled={exporting || loading || importing || backing}
+        class="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-secondary transition disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Exporter en CSV"
+      >
+        <FileSpreadsheet class="w-4 h-4" />
+        <span class="hidden sm:inline">CSV</span>
+      </button>
     </div>
   </div>
 

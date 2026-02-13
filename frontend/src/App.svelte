@@ -8,6 +8,7 @@
   import ItemForm from './lib/components/ItemForm.svelte';
   import AssetManager from './lib/components/AssetManager.svelte';
   import Dashboard from './lib/components/Dashboard.svelte';
+  import QRCodeModal from './lib/components/QRCodeModal.svelte';
   import NotificationToast from './lib/components/NotificationToast.svelte';
   import ProgressBar from './lib/components/ProgressBar.svelte';
   import { eventBus } from './lib/stores/events.svelte';
@@ -26,6 +27,8 @@
   let formModalItemId = $state<number | null | undefined>(undefined); // null = create, number = edit
   let assetManagerItemId = $state<number | null>(null);
   let assetManagerItemName = $state<string>('');
+  let qrCodeModalItemId = $state<number | null>(null);
+  let qrCodeModalItemName = $state<string>('');
 
   async function loadItems() {
     loading = true;
@@ -84,6 +87,16 @@
   function closeAssetManager() {
     assetManagerItemId = null;
     assetManagerItemName = '';
+  }
+
+  function openQRCodeModal(itemId: number, itemName: string) {
+    qrCodeModalItemId = itemId;
+    qrCodeModalItemName = itemName;
+  }
+
+  function closeQRCodeModal() {
+    qrCodeModalItemId = null;
+    qrCodeModalItemName = '';
   }
 
   function handleItemEdit(itemId: number) {
@@ -208,6 +221,7 @@
     onClose={closeDetailModal}
     onEdit={handleItemEdit}
     onDelete={handleItemDelete}
+    onGenerateQR={openQRCodeModal}
   />
 {/if}
 
@@ -224,5 +238,13 @@
     itemId={assetManagerItemId}
     itemName={assetManagerItemName}
     onClose={closeAssetManager}
+  />
+{/if}
+
+{#if qrCodeModalItemId !== null}
+  <QRCodeModal
+    itemId={qrCodeModalItemId}
+    itemName={qrCodeModalItemName}
+    onClose={closeQRCodeModal}
   />
 {/if}

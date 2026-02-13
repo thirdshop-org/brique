@@ -1,9 +1,18 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/lhommenul/brique/core/models"
+	"github.com/skip2/go-qrcode"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // ItemDTO is the Data Transfer Object for items
@@ -213,6 +222,416 @@ func (a *App) DeleteAsset(assetID int64) error {
 	}
 
 	a.events.Success("Fichier supprimé", "Le fichier a été supprimé")
+	return nil
+}
+
+// QRCodeData represents the data structure embedded in the QR code
+type QRCodeData struct {
+	ID           int64  `json:"id"`
+	Name         string `json:"name"`
+	Brand        string `json:"brand"`
+	Model        string `json:"model"`
+	SerialNumber string `json:"serialNumber"`
+	Type         string `json:"type"` // "brique-item"
+}
+
+// GenerateQRCode generates a QR code for an item and returns it as base64 PNG
+func (a *App) GenerateQRCode(itemID int64) (string, error) {
+	// Get item details
+	item, err := a.backpackService.GetItem(a.ctx, itemID)
+	if err != nil {
+		a.events.Error("Erreur QR Code", "Impossible de charger l'item")
+		return "", err
+	}
+
+	// Create QR code data
+	qrData := QRCodeData{
+		ID:           item.ID,
+		Name:         item.Name,
+		Brand:        item.Brand,
+		Model:        item.Model,
+		SerialNumber: item.SerialNumber,
+		Type:         "brique-item",
+	}
+
+	// Convert to JSON
+	jsonData, err := json.Marshal(qrData)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal QR data: %w", err)
+	}
+
+	// Generate QR code (256x256 pixels, medium error correction)
+	png, err := qrcode.Encode(string(jsonData), qrcode.Medium, 256)
+	if err != nil {
+		a.events.Error("Erreur QR Code", "Impossible de générer le QR code")
+		return "", fmt.Errorf("failed to generate QR code: %w", err)
+	}
+
+	// Encode to base64
+	base64Str := base64.StdEncoding.EncodeToString(png)
+
+	a.events.Success("QR Code généré", fmt.Sprintf("QR Code pour '%s' créé", item.Name))
+	return base64Str, nil
+}
+
+// ExportData represents the full export structure
+type ExportData struct {
+	ExportDate string                  `json:"exportDate"`
+	Version    string                  `json:"version"`
+	Items      []ItemWithAssetsDTO     `json:"items"`
+	Stats      map[string]interface{}  `json:"stats"`
+}
+
+// ExportToJSON exports all inventory data to a JSON file
+func (a *App) ExportToJSON() error {
+	// Get all items with their assets
+	items, err := a.backpackService.GetAllItems(a.ctx)
+	if err != nil {
+		a.events.Error("Erreur d'export", "Impossible de charger les items")
+		return err
+	}
+
+	exportItems := make([]ItemWithAssetsDTO, 0, len(items))
+	for _, item := range items {
+		itemWithAssets, err := a.backpackService.GetItemWithAssets(a.ctx, item.ID)
+		if err != nil {
+			continue
+		}
+
+		itemDTO := itemToDTO(&itemWithAssets.Item)
+		assetDTOs := make([]AssetDTO, len(itemWithAssets.Assets))
+		for i, asset := range itemWithAssets.Assets {
+			assetDTOs[i] = assetToDTO(&asset)
+		}
+
+		exportItems = append(exportItems, ItemWithAssetsDTO{
+			Item:   itemDTO,
+			Assets: assetDTOs,
+			Health: string(itemWithAssets.Health),
+		})
+	}
+
+	// Create export data
+	exportData := ExportData{
+		ExportDate: time.Now().Format(time.RFC3339),
+		Version:    "1.0",
+		Items:      exportItems,
+		Stats: map[string]interface{}{
+			"totalItems": len(items),
+		},
+	}
+
+	// Convert to JSON
+	jsonData, err := json.MarshalIndent(exportData, "", "  ")
+	if err != nil {
+		a.events.Error("Erreur d'export", "Impossible de générer le JSON")
+		return err
+	}
+
+	// Show save dialog
+	defaultFilename := fmt.Sprintf("brique-export-%s.json", time.Now().Format("2006-01-02"))
+	savePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Exporter l'inventaire",
+		DefaultFilename: defaultFilename,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON Files (*.json)", Pattern: "*.json"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		},
+	})
+
+	if err != nil || savePath == "" {
+		return fmt.Errorf("export cancelled")
+	}
+
+	// Write to file
+	if err := os.WriteFile(savePath, jsonData, 0644); err != nil {
+		a.events.Error("Erreur d'export", "Impossible d'écrire le fichier")
+		return err
+	}
+
+	a.events.Success("Export réussi", fmt.Sprintf("Inventaire exporté: %d items", len(items)))
+	return nil
+}
+
+// ImportFromJSON imports inventory data from a JSON file
+func (a *App) ImportFromJSON() error {
+	// Show open file dialog
+	filepath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Importer un inventaire",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON Files (*.json)", Pattern: "*.json"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		},
+	})
+
+	if err != nil || filepath == "" {
+		return fmt.Errorf("import cancelled")
+	}
+
+	// Read file
+	jsonData, err := os.ReadFile(filepath)
+	if err != nil {
+		a.events.Error("Erreur d'import", "Impossible de lire le fichier")
+		return err
+	}
+
+	// Parse JSON
+	var exportData ExportData
+	if err := json.Unmarshal(jsonData, &exportData); err != nil {
+		a.events.Error("Erreur d'import", "Format JSON invalide")
+		return err
+	}
+
+	// Import items
+	imported := 0
+	skipped := 0
+	for _, itemDTO := range exportData.Items {
+		// Check if item already exists (by brand+model+serial)
+		existing, _ := a.backpackService.SearchItems(a.ctx, itemDTO.Item.SerialNumber)
+		if len(existing) > 0 {
+			// Skip if serial number already exists
+			skipped++
+			continue
+		}
+
+		// Create item
+		item := &models.Item{
+			Name:         itemDTO.Item.Name,
+			Category:     itemDTO.Item.Category,
+			Brand:        itemDTO.Item.Brand,
+			Model:        itemDTO.Item.Model,
+			SerialNumber: itemDTO.Item.SerialNumber,
+			PhotoPath:    itemDTO.Item.PhotoPath,
+			Notes:        itemDTO.Item.Notes,
+		}
+
+		if err := a.backpackService.CreateItem(a.ctx, item); err != nil {
+			skipped++
+			continue
+		}
+
+		imported++
+
+		// Note: Assets are not imported because they reference file paths
+		// that may not exist on this machine
+	}
+
+	message := fmt.Sprintf("Import réussi: %d items importés, %d ignorés", imported, skipped)
+	if imported > 0 {
+		a.events.Success("Import réussi", message)
+	} else {
+		a.events.Warning("Import partiel", message)
+	}
+
+	return nil
+}
+
+// ExportToCSV exports inventory data to a CSV file
+func (a *App) ExportToCSV() error {
+	// Get all items
+	items, err := a.backpackService.GetAllItems(a.ctx)
+	if err != nil {
+		a.events.Error("Erreur d'export", "Impossible de charger les items")
+		return err
+	}
+
+	// Show save dialog
+	defaultFilename := fmt.Sprintf("brique-export-%s.csv", time.Now().Format("2006-01-02"))
+	savePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Exporter l'inventaire",
+		DefaultFilename: defaultFilename,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "CSV Files (*.csv)", Pattern: "*.csv"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		},
+	})
+
+	if err != nil || savePath == "" {
+		return fmt.Errorf("export cancelled")
+	}
+
+	// Create file
+	file, err := os.Create(savePath)
+	if err != nil {
+		a.events.Error("Erreur d'export", "Impossible de créer le fichier")
+		return err
+	}
+	defer file.Close()
+
+	// Create CSV writer
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Write header
+	header := []string{"ID", "Nom", "Catégorie", "Marque", "Modèle", "Numéro de série", "Date d'achat", "Notes", "Date de création"}
+	if err := writer.Write(header); err != nil {
+		return err
+	}
+
+	// Write data
+	for _, item := range items {
+		purchaseDate := ""
+		if item.PurchaseDate != nil {
+			purchaseDate = item.PurchaseDate.Format("2006-01-02")
+		}
+
+		row := []string{
+			fmt.Sprintf("%d", item.ID),
+			item.Name,
+			item.Category,
+			item.Brand,
+			item.Model,
+			item.SerialNumber,
+			purchaseDate,
+			item.Notes,
+			item.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+
+		if err := writer.Write(row); err != nil {
+			return err
+		}
+	}
+
+	a.events.Success("Export réussi", fmt.Sprintf("Inventaire exporté: %d items", len(items)))
+	return nil
+}
+
+// CreateBackup creates a backup of the database and assets directory
+func (a *App) CreateBackup() error {
+	a.events.EmitProgress(ProgressData{
+		ID:        "backup",
+		Operation: "Création du backup",
+		Current:   0,
+		Total:     100,
+	})
+
+	// Get config paths
+	dataDir := a.cfg.DataDir
+	dbPath := filepath.Join(dataDir, "brique.db")
+	assetsDir := filepath.Join(dataDir, "assets")
+
+	// Create backups directory
+	backupsDir := filepath.Join(dataDir, "backups")
+	if err := os.MkdirAll(backupsDir, 0755); err != nil {
+		a.events.EmitProgressComplete("backup")
+		a.events.Error("Erreur de backup", "Impossible de créer le dossier de backup")
+		return err
+	}
+
+	// Create backup directory with timestamp
+	timestamp := time.Now().Format("2006-01-02_15-04-05")
+	backupDir := filepath.Join(backupsDir, fmt.Sprintf("backup_%s", timestamp))
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		a.events.EmitProgressComplete("backup")
+		a.events.Error("Erreur de backup", "Impossible de créer le dossier de backup")
+		return err
+	}
+
+	// Update progress
+	a.events.EmitProgress(ProgressData{
+		ID:        "backup",
+		Operation: "Copie de la base de données",
+		Current:   30,
+		Total:     100,
+	})
+
+	// Backup database
+	dbBackupPath := filepath.Join(backupDir, "brique.db")
+	if err := copyFile(dbPath, dbBackupPath); err != nil {
+		a.events.EmitProgressComplete("backup")
+		a.events.Error("Erreur de backup", "Impossible de copier la base de données")
+		return err
+	}
+
+	// Update progress
+	a.events.EmitProgress(ProgressData{
+		ID:        "backup",
+		Operation: "Copie des assets",
+		Current:   60,
+		Total:     100,
+	})
+
+	// Backup assets directory
+	assetsBackupDir := filepath.Join(backupDir, "assets")
+	if err := copyDir(assetsDir, assetsBackupDir); err != nil {
+		// Not a critical error if assets dir doesn't exist or is empty
+		a.events.Warning("Backup partiel", "Assets non copiés")
+	}
+
+	// Create a metadata file
+	metadata := map[string]string{
+		"timestamp": timestamp,
+		"version":   "1.0",
+	}
+	metadataJSON, _ := json.MarshalIndent(metadata, "", "  ")
+	os.WriteFile(filepath.Join(backupDir, "metadata.json"), metadataJSON, 0644)
+
+	// Complete progress
+	a.events.EmitProgressComplete("backup")
+	a.events.Success("Backup créé", fmt.Sprintf("Backup enregistré: %s", backupDir))
+
+	return nil
+}
+
+// Helper function to copy a file
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	return err
+}
+
+// Helper function to copy a directory recursively
+func copyDir(src, dst string) error {
+	// Check if source exists
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if !srcInfo.IsDir() {
+		return fmt.Errorf("source is not a directory")
+	}
+
+	// Create destination directory
+	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
+		return err
+	}
+
+	// Read source directory
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	// Copy each entry
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if entry.IsDir() {
+			// Recursively copy subdirectory
+			if err := copyDir(srcPath, dstPath); err != nil {
+				return err
+			}
+		} else {
+			// Copy file
+			if err := copyFile(srcPath, dstPath); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
