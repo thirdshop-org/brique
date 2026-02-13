@@ -51,17 +51,11 @@
     const [err] = await safeCall(DeleteItem(itemId));
 
     if (err) {
-      eventBus.emit({
-        type: 'error',
-        message: `Erreur lors de la suppression: ${err.message}`
-      });
+      eventBus.error(`Erreur lors de la suppression: ${err.message}`);
       return;
     }
 
-    eventBus.emit({
-      type: 'success',
-      message: `"${itemWithAssets.item.name}" supprimé avec succès`
-    });
+    eventBus.success(`"${itemWithAssets.item.name}" supprimé avec succès`);
 
     onDelete?.();
     onClose();

@@ -44,10 +44,7 @@
     const [err, data] = await safeCall(GetItem(itemId));
 
     if (err) {
-      eventBus.emit({
-        type: 'error',
-        message: `Erreur lors du chargement: ${err.message}`
-      });
+      eventBus.error(`Erreur lors du chargement: ${err.message}`);
       loading = false;
       return;
     }
@@ -122,18 +119,13 @@
       );
 
       if (err) {
-        eventBus.emit({
-          type: 'error',
-          message: `Erreur lors de la modification: ${err.message}`
-        });
+        eventBus.error(`Erreur lors de la modification: ${err.message}`);
         submitting = false;
         return;
       }
 
-      eventBus.emit({
-        type: 'success',
-        message: `"${name}" modifié avec succès`
-      });
+      eventBus.success(`"${name}" modifié avec succès`);
+      
     } else {
       // Create new item
       const [err, data] = await safeCall(

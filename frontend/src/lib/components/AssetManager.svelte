@@ -49,10 +49,7 @@
     const [err, data] = await safeCall(GetAssets(itemId));
 
     if (err) {
-      eventBus.emit({
-        type: 'error',
-        message: `Erreur lors du chargement des assets: ${err.message}`
-      });
+      eventBus.error(`Erreur lors du chargement des assets: ${err.message}`);
       loading = false;
       return;
     }
@@ -121,10 +118,7 @@
 
     // Note: In a real implementation, we would need to handle file upload differently
     // since Wails requires file paths, not file objects. For now, we'll show an error.
-    eventBus.emit({
-      type: 'warning',
-      message: 'Upload de fichiers via drag & drop non implémenté. Utilisez la CLI pour ajouter des assets.'
-    });
+    eventBus.warning('Upload de fichiers via drag & drop non implémenté. Utilisez la CLI pour ajouter des assets.');
 
     uploading = false;
 
@@ -142,17 +136,11 @@
     const [err] = await safeCall(DeleteAsset(assetId));
 
     if (err) {
-      eventBus.emit({
-        type: 'error',
-        message: `Erreur lors de la suppression: ${err.message}`
-      });
+      eventBus.error(`Erreur lors de la suppression: ${err.message}`);
       return;
     }
 
-    eventBus.emit({
-      type: 'success',
-      message: `"${assetName}" supprimé avec succès`
-    });
+    eventBus.success(`"${assetName}" supprimé avec succès`);
 
     // Reload assets
     loadAssets();

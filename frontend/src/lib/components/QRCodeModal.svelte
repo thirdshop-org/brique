@@ -33,10 +33,7 @@
 
     if (err) {
       error = err.message;
-      eventBus.emit({
-        type: 'error',
-        message: `Erreur lors de la génération: ${err.message}`
-      });
+      eventBus.error(`Erreur lors de la génération: ${err.message}`);
       loading = false;
       return;
     }
@@ -56,10 +53,8 @@
     link.click();
     document.body.removeChild(link);
 
-    eventBus.emit({
-      type: 'success',
-      message: 'QR Code téléchargé'
-    });
+    eventBus.success('QR Code téléchargé');
+
   }
 
   function handleKeydown(e: KeyboardEvent) {
