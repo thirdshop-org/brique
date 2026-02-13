@@ -146,20 +146,13 @@
           notes.trim()
         )
       );
-
+      submitting = false;
       if (err) {
-        eventBus.emit({
-          type: 'error',
-          message: `Erreur lors de la création: ${err.message}`
-        });
-        submitting = false;
+        eventBus.error(`Erreur lors de la création: ${err.message}`);
         return;
       }
 
-      eventBus.emit({
-        type: 'success',
-        message: `"${name}" ajouté avec succès`
-      });
+      eventBus.success(`"${name}" ajouté avec succès`);
     }
 
     submitting = false;
