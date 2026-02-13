@@ -1,8 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { safeCall } from './lib/utils/safe';
-  import { GetAllItems, GetItemWithAssets } from './lib/wails/go/main/App';
+  import { GetAllItems, GetItemWithAssets } from './lib/wails/wailsjs/go/main/App';
   import ItemCard from './lib/components/ItemCard.svelte';
+  import NotificationToast from './lib/components/NotificationToast.svelte';
+  import ProgressBar from './lib/components/ProgressBar.svelte';
+  import { eventBus } from './lib/stores/events.svelte';
   import { Package, Plus, Search } from 'lucide-svelte';
 
   let items = $state<any[]>([]);
@@ -28,6 +31,11 @@
 
   onMount(() => {
     loadItems();
+
+    // Cleanup on unmount
+    return () => {
+      eventBus.destroy();
+    };
   });
 
   const filteredItems = $derived(
@@ -110,3 +118,7 @@
     {/if}
   </main>
 </div>
+
+<!-- Global UI Components -->
+<NotificationToast />
+<ProgressBar />

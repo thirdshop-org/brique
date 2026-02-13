@@ -29,6 +29,7 @@ type App struct {
 	database        *db.Database
 	backpackService *services.BackpackService
 	logger          *slog.Logger
+	events          *EventEmitter
 }
 
 // NewApp creates a new App application struct
@@ -40,6 +41,9 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
+	// Setup event emitter
+	a.events = NewEventEmitter(ctx)
+
 	// Setup logger
 	a.logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
@@ -50,6 +54,7 @@ func (a *App) startup(ctx context.Context) {
 	a.cfg, err = config.Load()
 	if err != nil {
 		a.logger.Error("Failed to load config", "error", err)
+		a.events.Error("Configuration Error", "Failed to load application configuration")
 		os.Exit(1)
 	}
 
@@ -59,6 +64,7 @@ func (a *App) startup(ctx context.Context) {
 	a.database, err = db.NewDatabase(a.cfg.DatabasePath, a.logger)
 	if err != nil {
 		a.logger.Error("Failed to initialize database", "error", err)
+		a.events.Error("Database Error", "Failed to initialize database")
 		os.Exit(1)
 	}
 
@@ -69,6 +75,7 @@ func (a *App) startup(ctx context.Context) {
 	a.backpackService = services.NewBackpackService(queries, a.cfg.AssetsDir)
 
 	a.logger.Info("Application initialized successfully")
+	a.events.Success("Brique démarré", "L'application est prête")
 }
 
 // shutdown is called at application termination

@@ -208,13 +208,22 @@ Date : 11 février 2026
 - ✅ Recherche instantanée (nom, marque, catégorie)
 - ✅ Affichage santé documentaire avec emojis
 - ✅ États de chargement, erreur et empty
-- ✅ Build frontend réussi (48KB JS, 11KB CSS)
+- ✅ Build frontend réussi (62KB JS, 16KB CSS)
+- ✅ Système de notifications toast en temps réel
+- ✅ Barres de progression pour opérations longues
+- ✅ Fix: Import des vrais bindings Wails (au lieu des stubs)
 
 Voir `STEP3_IN_PROGRESS.md` pour les détails complets.
 
 ### À implémenter
 
-- [ ] Bus d'événements pour la progression
+- [✅] Bus d'événements pour la progression
+  - ✅ EventEmitter côté Go (events.go)
+  - ✅ Store Svelte 5 réactif (events.svelte.ts)
+  - ✅ Composant NotificationToast (success/error/warning/info)
+  - ✅ Composant ProgressBar avec animations
+  - ✅ Intégration dans tous les handlers CRUD
+  - ✅ Documentation complète (EVENTS_SYSTEM.md)
 - [ ] Écrans supplémentaires :
   - [ ] Détail d'un item (modal)
   - [ ] Formulaire ajout/édition

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/lhommenul/brique/core/models"
 )
 
@@ -42,6 +44,7 @@ type ItemWithAssetsDTO struct {
 func (a *App) GetAllItems() ([]ItemDTO, error) {
 	items, err := a.backpackService.GetAllItems(a.ctx)
 	if err != nil {
+		a.events.Error("Erreur de chargement", "Impossible de charger les items")
 		return nil, err
 	}
 
@@ -97,9 +100,11 @@ func (a *App) CreateItem(name, category, brand, model, serialNumber, notes strin
 	}
 
 	if err := a.backpackService.CreateItem(a.ctx, item); err != nil {
+		a.events.Error("Erreur de création", fmt.Sprintf("Impossible de créer l'item '%s'", name))
 		return nil, err
 	}
 
+	a.events.Success("Item créé", fmt.Sprintf("'%s' a été ajouté à l'inventaire", name))
 	dto := itemToDTO(item)
 	return &dto, nil
 }
@@ -116,12 +121,31 @@ func (a *App) UpdateItem(id int64, name, category, brand, model, serialNumber, n
 		Notes:        notes,
 	}
 
-	return a.backpackService.UpdateItem(a.ctx, item)
+	if err := a.backpackService.UpdateItem(a.ctx, item); err != nil {
+		a.events.Error("Erreur de mise à jour", fmt.Sprintf("Impossible de mettre à jour l'item #%d", id))
+		return err
+	}
+
+	a.events.Success("Item mis à jour", fmt.Sprintf("'%s' a été modifié", name))
+	return nil
 }
 
 // DeleteItem deletes an item
 func (a *App) DeleteItem(id int64) error {
-	return a.backpackService.DeleteItem(a.ctx, id)
+	// Get item name before deletion for notification
+	item, err := a.backpackService.GetItem(a.ctx, id)
+	if err != nil {
+		a.events.Error("Erreur de suppression", "Item introuvable")
+		return err
+	}
+
+	if err := a.backpackService.DeleteItem(a.ctx, id); err != nil {
+		a.events.Error("Erreur de suppression", fmt.Sprintf("Impossible de supprimer l'item #%d", id))
+		return err
+	}
+
+	a.events.Success("Item supprimé", fmt.Sprintf("'%s' a été supprimé de l'inventaire", item.Name))
+	return nil
 }
 
 // SearchItems searches for items
@@ -156,18 +180,40 @@ func (a *App) GetAssets(itemID int64) ([]AssetDTO, error) {
 
 // AddAsset adds an asset to an item
 func (a *App) AddAsset(itemID int64, assetType, name, sourcePath string) (*AssetDTO, error) {
+	// Emit progress start
+	progressID := fmt.Sprintf("asset-upload-%d", itemID)
+	a.events.EmitProgress(ProgressData{
+		ID:        progressID,
+		Operation: "Ajout de fichier",
+		Current:   0,
+		Total:     100,
+		Filename:  name,
+	})
+
 	asset, err := a.backpackService.AddAsset(a.ctx, itemID, models.AssetType(assetType), name, sourcePath)
+
+	// Complete progress
+	a.events.EmitProgressComplete(progressID)
+
 	if err != nil {
+		a.events.Error("Erreur d'ajout", fmt.Sprintf("Impossible d'ajouter le fichier '%s'", name))
 		return nil, err
 	}
 
+	a.events.Success("Fichier ajouté", fmt.Sprintf("'%s' a été ajouté à l'item", name))
 	dto := assetToDTO(asset)
 	return &dto, nil
 }
 
 // DeleteAsset deletes an asset
 func (a *App) DeleteAsset(assetID int64) error {
-	return a.backpackService.DeleteAsset(a.ctx, assetID)
+	if err := a.backpackService.DeleteAsset(a.ctx, assetID); err != nil {
+		a.events.Error("Erreur de suppression", "Impossible de supprimer le fichier")
+		return err
+	}
+
+	a.events.Success("Fichier supprimé", "Le fichier a été supprimé")
+	return nil
 }
 
 // Helper functions to convert models to DTOs
