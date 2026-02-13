@@ -3,9 +3,10 @@
 
   interface Props {
     item: any;
+    onclick?: () => void;
   }
 
-  let { item }: Props = $props();
+  let { item, onclick }: Props = $props();
 
   function getHealthColor(health: string) {
     switch(health) {
@@ -35,7 +36,13 @@
   }
 </script>
 
-<div class="bg-card border rounded-lg p-5 hover:shadow-lg transition cursor-pointer">
+<div
+  class="bg-card border rounded-lg p-5 hover:shadow-lg transition cursor-pointer"
+  onclick={onclick}
+  role="button"
+  tabindex="0"
+  onkeydown={(e) => e.key === 'Enter' && onclick?.()}
+>
   <div class="flex items-start justify-between mb-3">
     <div class="p-2 bg-primary/10 rounded-lg">
       <Package class="w-5 h-5 text-primary" />

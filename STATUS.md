@@ -179,9 +179,10 @@ Tous les tests passent avec succès :
 
 Voir `STEP2_COMPLETE.md` pour les détails complets.
 
-## 🚧 Étape 3 : Interface Graphique (Wails + Svelte) - EN COURS
+## ✅ Étape 3 : Interface Graphique (Wails + Svelte) - COMPLÉTÉE
 
-Date : 11 février 2026
+Date de début : 11 février 2026
+Date de fin : 13 février 2026
 
 ### Infrastructure complétée
 
@@ -215,7 +216,7 @@ Date : 11 février 2026
 
 Voir `STEP3_IN_PROGRESS.md` pour les détails complets.
 
-### À implémenter
+### Implémenté
 
 - [✅] Bus d'événements pour la progression
   - ✅ EventEmitter côté Go (events.go)
@@ -224,11 +225,15 @@ Voir `STEP3_IN_PROGRESS.md` pour les détails complets.
   - ✅ Composant ProgressBar avec animations
   - ✅ Intégration dans tous les handlers CRUD
   - ✅ Documentation complète (EVENTS_SYSTEM.md)
-- [ ] Écrans supplémentaires :
-  - [ ] Détail d'un item (modal)
-  - [ ] Formulaire ajout/édition
-  - [ ] Gestion des assets (drag & drop)
-  - [ ] Dashboard avec statistiques
+- [✅] Écrans supplémentaires :
+  - ✅ Détail d'un item (modal) - ItemDetailModal.svelte
+  - ✅ Formulaire ajout/édition - ItemForm.svelte
+  - ✅ Gestion des assets (drag & drop) - AssetManager.svelte
+  - ✅ Dashboard avec statistiques - Dashboard.svelte
+  - ✅ Navigation entre Inventaire et Dashboard
+  - ✅ Intégration complète dans App.svelte
+
+Voir `STEP3_COMPLETE.md` pour les détails complets.
 
 ## 🚧 Prochaines étapes
 
