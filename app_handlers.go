@@ -574,6 +574,28 @@ func (a *App) SetPeerTrusted(peerID string, trusted bool) error {
 	return nil
 }
 
+// AddPeer adds a peer manually
+func (a *App) AddPeer(name, address string, trusted bool) error {
+	// Generate a unique ID for the peer
+	peerID := fmt.Sprintf("%s.manual", address)
+
+	peer := &models.Peer{
+		ID:        peerID,
+		Name:      name,
+		Address:   address,
+		IsTrusted: trusted,
+		LastSeen:  time.Now(),
+	}
+
+	if err := a.gossipService.AddPeer(a.ctx, peer); err != nil {
+		a.events.Error("Erreur", "Impossible d'ajouter le pair")
+		return err
+	}
+
+	a.events.Success("Pair ajouté", fmt.Sprintf("%s a été ajouté à la liste", name))
+	return nil
+}
+
 // RemovePeer removes a peer from the list
 func (a *App) RemovePeer(peerID string) error {
 	if err := a.gossipService.RemovePeer(a.ctx, peerID); err != nil {

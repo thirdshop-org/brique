@@ -6,6 +6,10 @@ export function AddAsset(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['AddAsset'](arg1, arg2, arg3, arg4);
 }
 
+export function AddPeer(arg1, arg2, arg3) {
+  return window['go']['main']['App']['AddPeer'](arg1, arg2, arg3);
+}
+
 export function CreateBackup() {
   return window['go']['main']['App']['CreateBackup']();
 }

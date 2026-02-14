@@ -173,6 +173,7 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/gossip/info", s.handleGossipInfo)
 	mux.HandleFunc("/api/v1/gossip/changes", s.handleGossipChanges)
 	mux.HandleFunc("/api/v1/gossip/peers", s.handlePeers)
+	mux.HandleFunc("/api/v1/gossip/peers/", s.handlePeerByID)
 	mux.HandleFunc("/api/v1/gossip/sync/", s.handleSync)
 }
 
@@ -413,18 +414,96 @@ func (s *Server) handleGossipChanges(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePeers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	if r.Method != http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
+		// List all peers
+		peers, err := s.gossipService.GetPeers(ctx)
+		if err != nil {
+			s.jsonError(w, "Failed to get peers", http.StatusInternalServerError)
+			return
+		}
+		s.jsonResponse(w, peers)
+
+	case http.MethodPost:
+		// Add a new peer manually
+		var req struct {
+			Name      string `json:"name"`
+			Address   string `json:"address"`
+			IsTrusted bool   `json:"is_trusted"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			s.jsonError(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if req.Name == "" || req.Address == "" {
+			s.jsonError(w, "Name and address are required", http.StatusBadRequest)
+			return
+		}
+
+		// Generate a unique ID for the peer
+		peerID := fmt.Sprintf("%s.manual", req.Address)
+
+		peer := &models.Peer{
+			ID:        peerID,
+			Name:      req.Name,
+			Address:   req.Address,
+			IsTrusted: req.IsTrusted,
+		}
+
+		if err := s.gossipService.AddPeer(ctx, peer); err != nil {
+			s.jsonError(w, "Failed to add peer", http.StatusInternalServerError)
+			return
+		}
+
+		s.jsonResponse(w, peer)
+
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handlePeerByID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Extract peer ID from path
+	peerID := r.URL.Path[len("/api/v1/gossip/peers/"):]
+	if peerID == "" {
+		s.jsonError(w, "Peer ID is required", http.StatusBadRequest)
 		return
 	}
 
-	peers, err := s.gossipService.GetPeers(ctx)
-	if err != nil {
-		s.jsonError(w, "Failed to get peers", http.StatusInternalServerError)
-		return
-	}
+	switch r.Method {
+	case http.MethodDelete:
+		// Remove a peer
+		if err := s.gossipService.RemovePeer(ctx, peerID); err != nil {
+			s.jsonError(w, "Failed to remove peer", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 
-	s.jsonResponse(w, peers)
+	case http.MethodPut:
+		// Update peer trust status
+		var req struct {
+			IsTrusted bool `json:"is_trusted"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			s.jsonError(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if err := s.gossipService.SetPeerTrust(ctx, peerID, req.IsTrusted); err != nil {
+			s.jsonError(w, "Failed to update peer", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {

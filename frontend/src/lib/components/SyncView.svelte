@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Network, RefreshCw, Check, X, Clock, Wifi, WifiOff, AlertCircle } from 'lucide-svelte';
+  import { Network, RefreshCw, Check, X, Clock, Wifi, WifiOff, AlertCircle, Plus } from 'lucide-svelte';
   import { safeCall } from '../utils/safe';
-  import { GetPeers, SyncWithPeer, SetPeerTrusted, RemovePeer, GetSyncHistory } from '../wails/wailsjs/go/main/App';
+  import { GetPeers, SyncWithPeer, SetPeerTrusted, RemovePeer, GetSyncHistory, AddPeer } from '../wails/wailsjs/go/main/App';
   import { eventBus } from '../stores/events.svelte';
 
   interface Peer {
@@ -30,6 +30,8 @@
   let syncLogs = $state<SyncLog[]>([]);
   let loading = $state(true);
   let syncing = $state<Record<string, boolean>>({});
+  let showAddPeerModal = $state(false);
+  let newPeer = $state({ name: '', address: '', isTrusted: true });
 
   onMount(() => {
     loadData();
@@ -131,6 +133,27 @@
     if (ms < 1000) return `${ms}ms`;
     return `${(ms / 1000).toFixed(1)}s`;
   }
+
+  async function handleAddPeer() {
+    if (!newPeer.name || !newPeer.address) {
+      eventBus.error('Nom et adresse requis');
+      return;
+    }
+
+    const [err] = await safeCall(AddPeer(newPeer.name, newPeer.address, newPeer.isTrusted));
+
+    if (err) {
+      // Error already handled by backend
+      return;
+    }
+
+    // Reset form and close modal
+    newPeer = { name: '', address: '', isTrusted: true };
+    showAddPeerModal = false;
+
+    // Reload peers
+    loadPeers();
+  }
 </script>
 
 <div class="space-y-6">
@@ -146,14 +169,25 @@
       </div>
     </div>
 
-    <button
-      onclick={loadData}
-      class="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-secondary transition"
-      title="Actualiser"
-    >
-      <RefreshCw class="w-4 h-4" />
-      Actualiser
-    </button>
+    <div class="flex gap-2">
+      <button
+        onclick={() => showAddPeerModal = true}
+        class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
+        title="Ajouter un pair"
+      >
+        <Plus class="w-4 h-4" />
+        Ajouter un pair
+      </button>
+
+      <button
+        onclick={loadData}
+        class="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-secondary transition"
+        title="Actualiser"
+      >
+        <RefreshCw class="w-4 h-4" />
+        Actualiser
+      </button>
+    </div>
   </div>
 
   {#if loading}
@@ -302,3 +336,63 @@
     </div>
   {/if}
 </div>
+
+<!-- Add Peer Modal -->
+{#if showAddPeerModal}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => showAddPeerModal = false}>
+    <div class="bg-card border rounded-lg p-6 w-full max-w-md" onclick={(e) => e.stopPropagation()}>
+      <h3 class="text-xl font-bold mb-4">Ajouter un pair manuellement</h3>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Nom du pair</label>
+          <input
+            type="text"
+            bind:value={newPeer.name}
+            placeholder="ex: Brique Production"
+            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">Adresse</label>
+          <input
+            type="text"
+            bind:value={newPeer.address}
+            placeholder="ex: https://brique.example.com"
+            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <p class="text-xs text-muted-foreground mt-1">
+            Entrez l'URL complète (ex: https://thirdshop-brique-xxx.traefik.me)<br/>
+            ou juste le host:port (ex: 192.168.1.10:8080 pour HTTP local)
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="trusted"
+            bind:checked={newPeer.isTrusted}
+            class="w-4 h-4"
+          />
+          <label for="trusted" class="text-sm">Pair de confiance</label>
+        </div>
+      </div>
+
+      <div class="flex gap-2 mt-6">
+        <button
+          onclick={handleAddPeer}
+          class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
+        >
+          Ajouter
+        </button>
+        <button
+          onclick={() => showAddPeerModal = false}
+          class="px-4 py-2 border rounded-lg hover:bg-secondary transition"
+        >
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}

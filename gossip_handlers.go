@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/lhommenul/brique/core/models"
@@ -91,7 +92,7 @@ func (a *App) SyncWithPeerHTTP(peerID string) (*models.SyncResult, error) {
 	})
 
 	// Get remote info
-	infoURL := fmt.Sprintf("http://%s/api/v1/gossip/info", peer.Address)
+	infoURL := buildPeerURL(peer.Address, "/api/v1/gossip/info")
 	resp, err := http.Get(infoURL)
 	if err != nil {
 		a.events.EmitProgressComplete(progressID)
@@ -127,7 +128,7 @@ func (a *App) SyncWithPeerHTTP(peerID string) (*models.SyncResult, error) {
 		since = *peer.LastSync
 	}
 
-	changesURL := fmt.Sprintf("http://%s/api/v1/gossip/changes?since=%s", peer.Address, since.Format(time.RFC3339))
+	changesURL := buildPeerURL(peer.Address, fmt.Sprintf("/api/v1/gossip/changes?since=%s", since.Format(time.RFC3339)))
 	resp, err = http.Get(changesURL)
 	if err != nil {
 		a.events.EmitProgressComplete(progressID)
@@ -228,4 +229,25 @@ func ServeGossipAPI(app *App, port int) error {
 	app.logger.Info("Gossip API server starting", "address", addr)
 
 	return http.ListenAndServe(addr, mux)
+}
+
+// buildPeerURL constructs the full URL for a peer endpoint
+// If the address already contains http:// or https://, use it as-is
+// Otherwise, detect if it's a .traefik.me domain or port 443 for HTTPS, else use HTTP
+func buildPeerURL(address, path string) string {
+	if strings.HasPrefix(address, "http://") || strings.HasPrefix(address, "https://") {
+		return fmt.Sprintf("%s%s", address, path)
+	}
+
+	// Detect if HTTPS should be used
+	useHTTPS := strings.Contains(address, ".traefik.me") ||
+	           strings.HasSuffix(address, ":443") ||
+	           !strings.Contains(address, ":")  // No port specified, assume HTTPS
+
+	protocol := "http"
+	if useHTTPS {
+		protocol = "https"
+	}
+
+	return fmt.Sprintf("%s://%s%s", protocol, address, path)
 }

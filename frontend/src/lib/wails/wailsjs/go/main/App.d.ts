@@ -6,6 +6,8 @@ import {models} from '../models';
 
 export function AddAsset(arg1:number,arg2:string,arg3:string,arg4:string):Promise<main.AssetDTO>;
 
+export function AddPeer(arg1:string,arg2:string,arg3:boolean):Promise<void>;
+
 export function CreateBackup():Promise<void>;
 
 export function CreateItem(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<main.ItemDTO>;

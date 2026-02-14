@@ -47,6 +47,9 @@ Une fois déployé, l'API est accessible sur `http://localhost:8080`
 - `GET /api/v1/gossip/info` - Informations sur l'instance
 - `GET /api/v1/gossip/changes?since={timestamp}` - Changements depuis une date
 - `GET /api/v1/gossip/peers` - Liste des pairs découverts
+- `POST /api/v1/gossip/peers` - Ajoute un pair manuellement
+- `PUT /api/v1/gossip/peers/{id}` - Met à jour la confiance d'un pair
+- `DELETE /api/v1/gossip/peers/{id}` - Supprime un pair
 - `POST /api/v1/gossip/sync/{peer_id}` - Synchronise avec un pair
 
 ## 🔧 Variables d'environnement
@@ -104,6 +107,28 @@ curl http://localhost:8080/api/v1/items
 
 ```bash
 curl http://localhost:8080/api/v1/gossip/info
+```
+
+### Ajouter un pair manuellement (pour sync inter-VPS)
+
+```bash
+curl -X POST http://localhost:8080/api/v1/gossip/peers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Brique Production",
+    "address": "vps.example.com:8080",
+    "is_trusted": true
+  }'
+```
+
+### Synchroniser avec un pair
+
+```bash
+# Récupérer l'ID du pair
+curl http://localhost:8080/api/v1/gossip/peers
+
+# Lancer la synchronisation
+curl -X POST http://localhost:8080/api/v1/gossip/sync/{peer_id}
 ```
 
 ## 🐛 Debug
