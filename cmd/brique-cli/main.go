@@ -21,6 +21,7 @@ var (
 	cfg             *config.Config
 	database        *db.Database
 	backpackService *services.BackpackService
+	gossipService   *services.GossipService
 	logger          *slog.Logger
 )
 
@@ -117,7 +118,57 @@ d'objets et leurs documentations de réparation.`,
 
 	assetCmd.AddCommand(assetAddCmd, assetListCmd, assetDeleteCmd)
 
-	rootCmd.AddCommand(itemCmd, assetCmd)
+	// Peer commands
+	peerCmd := &cobra.Command{
+		Use:   "peer",
+		Short: "Manage peers for synchronization",
+	}
+
+	peerListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all discovered peers",
+		RunE:  runPeerList,
+	}
+
+	peerAddCmd := &cobra.Command{
+		Use:   "add <name> <address>",
+		Short: "Add a peer manually",
+		Args:  cobra.ExactArgs(2),
+		RunE:  runPeerAdd,
+	}
+	peerAddCmd.Flags().BoolP("trusted", "t", false, "Mark peer as trusted")
+
+	peerRemoveCmd := &cobra.Command{
+		Use:   "remove <id>",
+		Short: "Remove a peer",
+		Args:  cobra.ExactArgs(1),
+		RunE:  runPeerRemove,
+	}
+
+	peerSyncCmd := &cobra.Command{
+		Use:   "sync <id>",
+		Short: "Synchronize with a peer",
+		Args:  cobra.ExactArgs(1),
+		RunE:  runPeerSync,
+	}
+
+	peerTrustCmd := &cobra.Command{
+		Use:   "trust <id>",
+		Short: "Mark a peer as trusted",
+		Args:  cobra.ExactArgs(1),
+		RunE:  runPeerTrust,
+	}
+
+	peerUntrustCmd := &cobra.Command{
+		Use:   "untrust <id>",
+		Short: "Remove trust from a peer",
+		Args:  cobra.ExactArgs(1),
+		RunE:  runPeerUntrust,
+	}
+
+	peerCmd.AddCommand(peerListCmd, peerAddCmd, peerRemoveCmd, peerSyncCmd, peerTrustCmd, peerUntrustCmd)
+
+	rootCmd.AddCommand(itemCmd, assetCmd, peerCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -151,6 +202,13 @@ func initApp() error {
 
 	// Create backpack service
 	backpackService = services.NewBackpackService(queries, cfg.AssetsDir)
+
+	// Create gossip service
+	instanceName := fmt.Sprintf("Brique-CLI-%s", os.Getenv("USER"))
+	if instanceName == "Brique-CLI-" {
+		instanceName = "Brique-CLI"
+	}
+	gossipService = services.NewGossipService(queries, instanceName, "localhost:9090")
 
 	logger.Info("Application initialized successfully")
 
@@ -546,6 +604,163 @@ func runAssetDelete(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("\n✓ Asset #%d deleted successfully\n", assetID)
+
+	return nil
+}
+
+// Peer commands implementation
+
+func runPeerList(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+
+	peers, err := gossipService.GetPeers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get peers: %w", err)
+	}
+
+	if len(peers) == 0 {
+		fmt.Println("\nNo peers discovered.")
+		return nil
+	}
+
+	fmt.Printf("\n=== Peers (%d) ===\n\n", len(peers))
+
+	for _, peer := range peers {
+		fmt.Printf("ID: %s\n", peer.ID)
+		fmt.Printf("  Name:      %s\n", peer.Name)
+		fmt.Printf("  Address:   %s\n", peer.Address)
+		fmt.Printf("  Status:    %s\n", peer.Status)
+		if peer.IsTrusted {
+			fmt.Printf("  Trusted:   ✓\n")
+		}
+		if !peer.LastSeen.IsZero() {
+			fmt.Printf("  Last Seen: %s\n", peer.LastSeen.Format("2006-01-02 15:04:05"))
+		}
+		if peer.LastSync != nil {
+			fmt.Printf("  Last Sync: %s\n", peer.LastSync.Format("2006-01-02 15:04:05"))
+		}
+		fmt.Println()
+	}
+
+	return nil
+}
+
+func runPeerAdd(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+
+	name := args[0]
+	address := args[1]
+	trusted, _ := cmd.Flags().GetBool("trusted")
+
+	// Generate a unique ID for the peer
+	peerID := fmt.Sprintf("%s.manual", address)
+
+	peer := &models.Peer{
+		ID:        peerID,
+		Name:      name,
+		Address:   address,
+		IsTrusted: trusted,
+	}
+
+	if err := gossipService.AddPeer(ctx, peer); err != nil {
+		return fmt.Errorf("failed to add peer: %w", err)
+	}
+
+	fmt.Printf("\n✓ Peer '%s' added successfully\n", name)
+	fmt.Printf("  ID:      %s\n", peerID)
+	fmt.Printf("  Address: %s\n", address)
+	if trusted {
+		fmt.Printf("  Trusted: ✓\n")
+	}
+
+	return nil
+}
+
+func runPeerRemove(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+	reader := bufio.NewReader(os.Stdin)
+
+	peerID := args[0]
+
+	fmt.Printf("\n=== Remove Peer ===\n\n")
+	fmt.Printf("Peer ID: %s\n", peerID)
+	fmt.Print("Are you sure you want to remove this peer? (yes/no): ")
+
+	confirmation, _ := reader.ReadString('\n')
+	confirmation = strings.ToLower(strings.TrimSpace(confirmation))
+
+	if confirmation != "yes" && confirmation != "y" {
+		fmt.Println("Removal cancelled.")
+		return nil
+	}
+
+	if err := gossipService.RemovePeer(ctx, peerID); err != nil {
+		return fmt.Errorf("failed to remove peer: %w", err)
+	}
+
+	fmt.Printf("\n✓ Peer removed successfully\n")
+
+	return nil
+}
+
+func runPeerSync(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+
+	peerID := args[0]
+
+	// Get peer info
+	peers, err := gossipService.GetPeers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get peers: %w", err)
+	}
+
+	var peer *models.Peer
+	for _, p := range peers {
+		if p.ID == peerID {
+			peer = &p
+			break
+		}
+	}
+
+	if peer == nil {
+		return fmt.Errorf("peer not found: %s", peerID)
+	}
+
+	fmt.Printf("\n=== Synchronizing with %s ===\n\n", peer.Name)
+
+	// Note: This is a simplified version. The full sync logic would need
+	// to implement the HTTP sync like in gossip_handlers.go
+	// For now, just show a message
+	fmt.Println("Sync functionality requires running the full application.")
+	fmt.Println("Use the GUI or server mode for synchronization.")
+
+	return nil
+}
+
+func runPeerTrust(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+
+	peerID := args[0]
+
+	if err := gossipService.SetPeerTrust(ctx, peerID, true); err != nil {
+		return fmt.Errorf("failed to trust peer: %w", err)
+	}
+
+	fmt.Printf("\n✓ Peer '%s' marked as trusted\n", peerID)
+
+	return nil
+}
+
+func runPeerUntrust(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+
+	peerID := args[0]
+
+	if err := gossipService.SetPeerTrust(ctx, peerID, false); err != nil {
+		return fmt.Errorf("failed to untrust peer: %w", err)
+	}
+
+	fmt.Printf("\n✓ Trust removed from peer '%s'\n", peerID)
 
 	return nil
 }
